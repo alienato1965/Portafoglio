@@ -3,13 +3,24 @@ import yfinance as yf
 import pandas as pd
 import plotly.express as px
 
-# 1. CONFIGURAZIONE PAGINA
+# 1. CONFIGURAZIONE PAGINA E STILE (Verde Acceso per Rendimenti)
 st.set_page_config(page_title="Finanza Personale 70/30", layout="wide")
 
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
-    .stMetric { background-color: #1e2130; padding: 15px; border-radius: 10px; border: 1px solid #3e4253; }
+    /* Box delle metriche */
+    .stMetric { 
+        background-color: #1e2130; 
+        padding: 15px; 
+        border-radius: 10px; 
+        border: 1px solid #3e4253; 
+    }
+    /* Colore VERDE ACCESO per i numeri del rendimento */
+    [data-testid="stMetricValue"] {
+        color: #00FF00 !important;
+        font-weight: bold;
+    }
     h1, h2, h3 { color: #00ffcc; }
     </style>
     """, unsafe_allow_html=True)
@@ -39,7 +50,7 @@ def get_data(ticker_list):
 try:
     data = get_data(tickers)
     
-    # 4. TABELLA E METRICHE CAGR
+    # 4. TABELLA E METRICHE CAGR (Ora in Verde Acceso)
     st.subheader(f"📊 Rendimento Annuo Composto ({anni_cagr} anni)")
     cols = st.columns(6)
     cagr_results = {}
@@ -49,14 +60,14 @@ try:
         days = anni_cagr * 252
         if len(serie) >= days:
             v_ini, v_fin = serie.iloc[-days], serie.iloc[-1]
-            # Pulizia dati per evitare errori di formato
+            # Gestione sicura dei dati (Float/Series)
             v_i = float(v_ini.iloc[0] if hasattr(v_ini, 'iloc') else v_ini)
             v_f = float(v_fin.iloc[0] if hasattr(v_fin, 'iloc') else v_fin)
             cagr = ((v_f / v_i)**(1/anni_cagr)-1)*100
             cagr_results[t] = cagr
             cols[i].metric(t, f"{cagr:.2f}%")
         else:
-            cagr_results[t] = 8.0 # Default se dati mancanti
+            cagr_results[t] = 8.0 
             cols[i].metric(t, "N/D")
 
     # 5. GRAFICO STORICO
@@ -72,7 +83,7 @@ try:
     st.header("⚖️ Ribilanciatore")
     capitale = st.number_input("Valore Totale Portafoglio attuale (€)", value=10000.0)
     
-    # Pesi basati sulla tua strategia
+    # Pesi della tua strategia
     pesi = {e1: 0.35, e2: 0.35, e3: 0.10, e4: 0.10, e5: 0.05, e6: 0.05}
     
     c1, c2 = st.columns(2)
@@ -97,6 +108,7 @@ try:
     for m in range(mesi):
         proiezione.append((proiezione[-1] * (1 + resa_mensile)) + risparmio)
     
+    # Anche qui il risultato finale sarà in risalto
     st.success(f"### Capitale stimato tra 10 anni: {proiezione[-1]:,.2f}€")
     st.line_chart(proiezione)
     st.caption(f"Basato su rendimento medio portafoglio: {resa_media:.2f}%")
