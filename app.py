@@ -5,7 +5,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="Elite 70/30", layout="wide")
 
-# CSS BLINDATO
+# CSS: NERO TOTALE + SLIDER VERDE/BIANCO
 st.markdown("""
 <style>
     .stApp, [data-testid="stSidebar"], .main { background-color: #000000 !important; }
@@ -35,8 +35,8 @@ with st.sidebar:
     e6 = st.text_input("ETF 6", "TSLA")
     p6 = st.slider(f"% {e6}", 0, 100, 5)
     tkrs = [e1, e2, e3, e4, e5, e6]
-    pesi = {e1: p1/100, e2: p2/100, e3: p3/100, e4: p4/100, e5: p5/100, e6: p6/100}
-    anni = st.slider("Anni Storici", 5, 20, 10)
+    pesi = {e1:p1/100, e2:p2/100, e3:p3/100, e4:p4/100, e5:p5/100, e6:p6/100}
+    anni = st.slider("Anni", 5, 20, 10)
 
 @st.cache_data
 def load_data(l):
@@ -65,10 +65,12 @@ if not df.empty:
             cl[i].metric(t, "N/D")
 
     st.markdown("---")
-    st.subheader("📈 TREND STORICO (FONDO NERO)")
+    st.subheader("📈 TREND STORICO MULTICOLORE")
     p_df = (df.tail(anni*252) / df.tail(anni*252).iloc[0]) * 100
-    fig = px.line(p_df, color_discrete_sequence=['#00ff00'])
-    fig.update_layout(plot_bgcolor='#000000', paper_bgcolor='#000000', font_color="#ffffff")
+    # Palette Neon: Verde, Ciano, Oro, Magenta, Arancio, Bianco
+    fig = px.line(p_df, color_discrete_sequence=['#00ff00', '#00ffff', '#ffd700', '#ff00ff', '#ff8c00', '#ffffff'])
+    fig.update_layout(plot_bgcolor='#000000', paper_bgcolor='#000000', font_color="#ffffff",
+                      legend=dict(bgcolor="rgba(0,0,0,0)"))
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
@@ -85,7 +87,7 @@ if not df.empty:
     r_m = (1 + (sum([cagr[t] * pesi[t] for t in tkrs]) / 100))**(1/12) - 1
     v_f = [float(cap)]
     for _ in range(120): v_f.append((v_f[-1] * (1 + r_m)) + pac)
-    st.success(f"### Capitale Finale stimato: {v_f[-1]:,.0f} €")
+    st.success(f"### Capitale Finale 2036: {v_f[-1]:,.0f} €")
     st.line_chart(v_f)
 else:
-    st.error("Errore caricamento dati yFinance.")
+    st.error("Errore caricamento dati.")
