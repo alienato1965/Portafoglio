@@ -96,4 +96,36 @@ try:
     # 5. GRAFICO STORICO
     st.markdown("---")
     plot_data = data.tail(anni_cagr * 252)
-    plot_norm = (plot_data / plot_data.
+    plot_norm = (plot_data / plot_data.iloc[0]) * 100
+    st.plotly_chart(px.line(plot_norm, title="📈 Crescita Comparativa", template="plotly_dark"), use_container_width=True)
+
+    # 6. RIBILANCIATORE DINAMICO
+    st.markdown("---")
+    st.header("⚖️ Ribilanciatore in Tempo Reale")
+    capitale = st.number_input("Valore Totale Portafoglio (€)", value=10000.0)
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        st.write("### 🎯 Target in Euro")
+        for etf, peso in pesi.items():
+            st.write(f"**{etf}**: {capitale*peso:,.2f}€ ({peso*100:.0f}%)")
+    
+    # 7. PROIEZIONE FUTURA BASATA SUI NUOVI PESI
+    st.markdown("---")
+    st.header("🔮 Simulatore 2036")
+    risparmio = st.slider("Risparmio mensile (€)", 0, 5000, 500)
+    
+    # Calcolo resa media pesata con le tue percentuali scelte
+    resa_media = sum(cagr_results[t] * pesi[t] for t in tickers)
+    mesi = 10 * 12
+    r_mensile = (1 + (resa_media / 100)) ** (1/12) - 1
+    proiezione = [capitale]
+    for m in range(mesi):
+        proiezione.append((proiezione[-1] * (1 + r_mensile)) + risparmio)
+    
+    st.success(f"## 💰 Capitale Stimato: {proiezione[-1]:,.2f}€")
+    st.line_chart(proiezione)
+    st.caption(f"Rendimento medio del portafoglio scelto: {resa_media:.2f}%")
+
+except Exception as e:
+    st.error(f"Errore nel caricamento dei dati: {e}")
