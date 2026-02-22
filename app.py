@@ -66,4 +66,64 @@ def get_full_data(tkrs):
 
 try:
     df = get_full_data(tickers)
-    prezzi_attuali = {t: float(df[t].iloc[-1]) for t
+    prezzi_attuali = {t: float(df[t].iloc[-1]) for t in tickers}
+    
+    # 4. RENDIMENTI
+    st.subheader("🟢 PERFORMANCE ANNUALIZZATA")
+    cols = st.columns(3)
+    cols2 = st.columns(3)
+    all_cols = cols + cols2
+    cagr_vals = {}
+
+    for i, t in enumerate(tickers):
+        s = df[t].dropna()
+        n = anni * 252
+        if len(s) >= n:
+            v_i = float(s.iloc[-n].iloc[0] if hasattr(s.iloc[-n], 'iloc') else s.iloc[-n])
+            v_f = prezzi_attuali[t]
+            res = ((v_f / v_i)**(1/anni)-1)*100
+            cagr_vals[t] = res
+            all_cols[i].metric(t, f"{res:.1f}%")
+        else:
+            cagr_vals[t] = 8.0
+            all_cols[i].metric(t, "N/D")
+
+    # 5. GRAFICO TREND
+    st.markdown("---")
+    p_df = (df.tail(anni*252) / df.tail(anni*252).iloc[0]) * 100
+    st.plotly_chart(px.line(p_df, template="plotly_dark", color_discrete_sequence=['#00ff00', '#FFD700', '#ffffff']), use_container_width=True)
+
+    # 6. RIBILANCIATORE AVANZATO (EURO + QUOTE)
+    st.markdown("---")
+    st.header("⚖️ RIBILANCIAMENTO E QUOTE")
+    cap = st.number_input("Valore Totale Portafoglio (€)", value=10000)
+    
+    st.write("### 🎯 Target Ideale")
+    # Tabella per pulizia visiva
+    dati_rib = []
+    for t, p in pesi.items():
+        valore_target = cap * p
+        quote_necessarie = valore_target / prezzi_attuali[t]
+        dati_rib.append({
+            "Ticker": t,
+            "Peso (%)": f"{p*100:.0f}%",
+            "Valore Target (€)": f"{valore_target:,.2f} €",
+            "Prezzo Attuale (€)": f"{prezzi_attuali[t]:,.2f} €",
+            "Quote Target (Pezzi)": round(quote_necessarie, 2)
+        })
+    st.table(pd.DataFrame(dati_rib))
+
+    # 7. PROIEZIONE 10 ANNI
+    st.markdown("---")
+    st.subheader("🔮 PROIEZIONE 2036")
+    pac = st.slider("Risparmio Mensile (€)", 0, 5000, 500)
+    resa = sum([cagr_vals[t] * pesi[t] for t in tickers])
+    r_m = (1 + (resa / 100))**(1/12) - 1
+    v_f = [float(cap)]
+    for _ in range(120): v_f.append((v_f[-1] * (1 + r_m)) + pac)
+    
+    st.success(f"### Capitale Finale Stimato: {v_f[-1]:,.0f} €")
+    st.line_chart(v_f)
+
+except Exception as ex:
+    st.error(f"Errore: {ex}")
