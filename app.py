@@ -3,97 +3,94 @@ import yfinance as yf
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Elite Terminal v4", layout="wide")
+st.set_page_config(page_title="Elite Terminal v5", layout="wide")
 
-# CSS DEFINITIVO: SCURO, PULITO, PROFESSIONALE
+# CSS: NERO TOTALE, BORDI NEON E FONT TECNICO
 st.markdown("""
 <style>
-    .stApp { background-color: #000000 !important; }
-    font-family: 'JetBrains Mono', monospace;
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+    .stApp { background-color: #000000 !important; font-family: 'JetBrains Mono', monospace; }
+    [data-testid="stSidebar"] { background-color: #050505 !important; border-right: 1px solid #1a1a1a; }
     [data-testid="stMetric"] {
-        background: #0a0a0a !important;
-        border: 1px solid #00ff00 !important;
-        border-radius: 5px;
+        background: #080808 !important; border: 1px solid #00ff00 !important;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.2); border-radius: 4px; padding: 12px;
     }
-    h1, h2, h3 { color: #00ff00 !important; }
-    .stSlider [data-baseweb="slider"] [role="slider"] { background-color: #00ff00 !important; }
+    [data-testid="stMetricValue"] { color: #00ff00 !important; text-shadow: 0 0 8px #00ff00; }
+    h1, h2, h3 { color: #00ff00 !important; text-transform: uppercase; }
 </style>
 """, unsafe_allow_html=True)
 
-# CONFIGURAZIONE ASSET (STRATEGIA SALVATA)
-# Core: 45% VWCE, 25% QDVE | Satellite: 20% Oro, 10% Junior Miners
+st.title("📟 ELITE STRATEGY COMMAND v5.0")
+
+# STRATEGIA DEFINITIVA 70/30 (Dati salvati)
 assets = {
-    "VWCE.DE": 0.45,
-    "QDVE.DE": 0.25,
-    "SGLN.L": 0.20,
-    "GDXJ": 0.10
+    "VWCE.DE": 0.45, # Core Mondiale
+    "QDVE.DE": 0.25, # Core Tech
+    "SGLN.L": 0.20,  # Satellite Oro
+    "GDXJ": 0.10     # Satellite Junior Miners
 }
 
-st.title("📟 ELITE STRATEGY COMMAND v4.0")
-
 with st.sidebar:
-    st.header("⚙️ PARAMETRI")
-    capitale_iniziale = st.number_input("Capitale Attuale (€)", value=10000)
-    pac_mensile = st.slider("PAC Mensile (€)", 0, 2000, 500)
-    anni_analisi = st.slider("Anni Storici", 5, 20, 10)
-    inflazione_stima = st.slider("Inflazione stimata %", 0.0, 5.0, 2.5)
+    st.header("⚙️ PARAMETRI 2026-2036")
+    cap_iniziale = st.number_input("Capitale Attuale (€)", value=10000)
+    pac_mensile = st.slider("PAC Mensile (€)", 0, 3000, 500)
+    anni_analisi = st.slider("Anni Storici Analisi", 5, 20, 10)
+    inflazione = st.slider("Inflazione annua (%)", 0.0, 5.0, 2.0)
 
 @st.cache_data
-def get_market_data(tickers):
-    d = yf.download(tickers, period="25y")["Close"]
-    return d.ffill()
+def get_data(tickers):
+    return yf.download(tickers, period="25y")["Close"].ffill()
 
-df = get_market_data(list(assets.keys()))
+df = get_data(list(assets.keys()))
 
 if not df.empty:
-    # CALCOLO PERFORMANCE STORICA
-    st.subheader("📊 ANALISI ASSET")
+    st.subheader("🟢 ANALISI PERFORMANCE E RISCHIO")
     cols = st.columns(4)
     cagr_list = {}
     
     for i, (t, peso) in enumerate(assets.items()):
-        prezzo_f = float(df[t].iloc[-1])
-        prezzo_i = float(df[t].tail(anni_analisi*252).iloc[0])
-        cagr = ((prezzo_f / prezzo_i)**(1/anni_analisi)-1)*100
+        # Calcolo Performance
+        s = df[t].tail(anni_analisi*252)
+        cagr = ((s.iloc[-1] / s.iloc[0])**(1/anni_analisi)-1)*100
         cagr_list[t] = cagr
-        cols[i].metric(t, f"{cagr:.1f}%", f"Peso: {peso*100}%")
+        
+        # Calcolo Drawdown (Massima perdita)
+        dd = ((s / s.cummax() - 1).min()) * 100
+        cols[i].metric(t, f"{cagr:.1f}%", f"Drawdown: {dd:.1f}%", delta_color="inverse")
 
-    # PROIEZIONE 2036 (10 ANNI)
+    # TREND STORICO
     st.markdown("---")
-    st.subheader("🔮 PROIEZIONE 2036 (POTERE D'ACQUISTO)")
+    p_df = (df.tail(anni_analisi*252) / df.tail(anni_analisi*252).iloc[0]) * 100
+    fig = px.line(p_df, color_discrete_sequence=['#00ff00', '#00ffff', '#ffd700', '#ff00ff'])
+    fig.update_layout(height=350, plot_bgcolor='black', paper_bgcolor='black', font_color='white')
+    st.plotly_chart(fig, use_container_width=True)
+
+    # PROIEZIONE FINALE (10 ANNI)
+    st.markdown("---")
+    st.subheader("🔮 PROIEZIONE STRATEGICA 2036")
     
-    resa_media = sum([cagr_list[t] * assets[t] for t in assets])
-    r_mensile = (1 + (resa_media / 100))**(1/12) - 1
-    inf_mensile = (1 + (inflazione_stima / 100))**(1/12) - 1
+    resa_pesata = sum([cagr_list[t] * assets[t] for t in assets])
+    r_m = (1 + (resa_pesata / 100))**(1/12) - 1
+    inf_m = (1 + (inflazione / 100))**(1/12) - 1
     
-    valore_nominale = [float(capitale_iniziale)]
-    valore_reale = [float(capitale_iniziale)]
+    nominale = [float(cap_iniziale)]
+    reale = [float(cap_iniziale)]
     
     for m in range(120): # 10 anni
-        nuovo_nom = (valore_nominale[-1] * (1 + r_mensile)) + pac_mensile
-        valore_nominale.append(nuovo_nom)
-        # Scontiamo l'inflazione mensilmente
-        valore_reale.append(nuovo_nom / (1 + inf_mensile)**(m+1))
+        nuovo_val = (nominale[-1] * (1 + r_m)) + pac_mensile
+        nominale.append(nuovo_val)
+        reale.append(nuovo_val / (1 + inf_m)**(m+1))
 
-    # RISULTATI FINALI
-    lordo = valore_nominale[-1]
-    investito = capitale_iniziale + (pac_mensile * 120)
-    tasse = (lordo - investito) * 0.26 if lordo > investito else 0
+    lordo = nominale[-1]
+    tot_investito = cap_iniziale + (pac_mensile * 120)
+    tasse = (lordo - tot_investito) * 0.26 if lordo > tot_investito else 0
     netto = lordo - tasse
-    
+
     c1, c2, c3 = st.columns(3)
     c1.metric("CAPITALE LORDO", f"€ {lordo:,.0f}")
-    c2.metric("NETTO TASSE (26%)", f"€ {netto:,.0f}")
-    c3.metric("VALORE REALE (OGGI)", f"€ {valore_reale[-1]:,.0f}")
-    
-    st.info(f"💡 Tra 10 anni, i tuoi {lordo:,.0f}€ avranno lo stesso potere d'acquisto di {valore_reale[-1]:,.0f}€ oggi.")
+    c2.metric("NETTO (26% TASSE)", f"€ {netto:,.0f}")
+    c3.metric("POTERE ACQUISTO REALE", f"€ {reale[-1]:,.0f}")
 
-    # GRAFICO PROIEZIONE
-    proiezione_df = pd.DataFrame({
-        "Nominale (Numeri)": valore_nominale,
-        "Reale (Potere Acquisto)": valore_reale
-    })
-    st.line_chart(proiezione_df)
-
+    st.info(f"💡 Il tuo portafoglio 70/30 punta a una resa annua media stimata del {resa_pesata:.2f}%.")
 else:
-    st.error("Connessione ai dati fallita. Riprova tra un istante.")
+    st.error("Dati non disponibili.")
