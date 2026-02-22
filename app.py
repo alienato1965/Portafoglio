@@ -3,16 +3,20 @@ import yfinance as yf
 import pandas as pd
 import plotly.express as px
 
-# 1. STYLE CSS
+# 1. SETUP PAGINA E CSS FORZATO
 st.set_page_config(page_title="Elite 70/30", layout="wide")
+
 st.markdown("""
 <style>
+    /* Sfondo nero ovunque */
     .stApp, [data-testid="stSidebar"], .main { background-color: #000000 !important; }
     p, span, label, .stMarkdown { color: #ffffff !important; }
-    /* Slider: Linea Verde e Punto Bianco */
+    
+    /* Slider: Verde e Bianco */
     .stSlider [data-baseweb="slider"] [role="slider"] { background-color: #ffffff !important; border: 2px solid #00ff00 !important; }
     .stSlider [data-baseweb="slider"] [aria-valuemax] { background-image: linear-gradient(to right, #00ff00, #00ff00) !important; }
-    /* Metriche */
+    
+    /* Metriche Neon */
     [data-testid="stMetric"] { background: #0a0a0a !important; border: 1px solid #00ff00 !important; border-radius: 10px; }
     [data-testid="stMetricValue"] { color: #00ff00 !important; text-shadow: 0 0 10px #00ff00; }
     h1, h2, h3 { color: #00ff00 !important; }
@@ -21,7 +25,7 @@ st.markdown("""
 
 st.title("📟 DASHBOARD ELITE 70/30")
 
-# 2. SIDEBAR
+# 2. SIDEBAR CONFIG
 with st.sidebar:
     st.header("⚙️ SETUP")
     e1 = st.text_input("ETF 1", "VWCE.DE")
@@ -50,44 +54,8 @@ try:
     df = get_data(tkrs)
     prezzi = {t: float(df[t].iloc[-1]) for t in tkrs}
     
-    # 4. PERFORMANCE
     st.subheader("🟢 PERFORMANCE")
     cols = st.columns(3) + st.columns(3)
     cagr_dict = {}
     for i, t in enumerate(tkrs):
         s = df[t].dropna()
-        n = anni * 252
-        if len(s) >= n:
-            v_i, v_f = float(s.iloc[-n].iloc[0] if hasattr(s.iloc[-n], 'iloc') else s.iloc[-n]), prezzi[t]
-            c = ((v_f / v_i)**(1/anni)-1)*100
-            cagr_dict[t] = c
-            cols[i].metric(t, f"{c:.1f}%")
-        else:
-            cagr_dict[t] = 8.0
-            cols[i].metric(t, "N/D")
-
-    # 5. GRAFICO
-    st.markdown("---")
-    p_df = (df.tail(anni*252) / df.tail(anni*252).iloc[0]) * 100
-    st.plotly_chart(px.line(p_df, template="plotly_dark", color_discrete_sequence=['#00ff00']), use_container_width=True)
-
-    # 6. RIBILANCIAMENTO
-    st.markdown("---")
-    cap = st.number_input("Valore Portafoglio (€)", value=10000)
-    res = []
-    for t, p in pesi.items():
-        v_target = cap * p
-        res.append({"Asset": t, "Target (€)": round(v_target, 0), "Quote": round(v_target/prezzi[t], 2)})
-    st.table(pd.DataFrame(res))
-
-    # 7. PAC
-    st.markdown("---")
-    pac = st.slider("PAC Mensile (€)", 0, 5000, 500)
-    r_m = (1 + (sum([cagr_dict[t] * pesi[t] for t in tkrs]) / 100))**(1/12) - 1
-    v_f = [float(cap)]
-    for _ in range(120): v_f.append((v_f[-1] * (1 + r_m)) + pac)
-    st.success(f"### Capitale 2036: {v_f[-1]:,.0f} €")
-    st.line_chart(v_f)
-
-except Exception as e:
-    st.error(f"Errore: {e}")
