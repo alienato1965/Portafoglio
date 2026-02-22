@@ -3,30 +3,42 @@ import yfinance as yf
 import pandas as pd
 import plotly.express as px
 
-# 1. CONFIGURAZIONE PAGINA E STILE (Verde Acceso per Rendimenti)
+# 1. CONFIGURAZIONE PAGINA E STILE "ALTA LEGGIBILITÀ"
 st.set_page_config(page_title="Finanza Personale 70/30", layout="wide")
 
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
-    /* Box delle metriche */
-    .stMetric { 
-        background-color: #1e2130; 
-        padding: 15px; 
-        border-radius: 10px; 
-        border: 1px solid #3e4253; 
+    
+    /* Box delle metriche più grandi e spaziati */
+    [data-testid="stMetric"] {
+        background-color: #1e2130;
+        padding: 20px !important;
+        border-radius: 15px;
+        border: 2px solid #3e4253;
+        text-align: center;
     }
-    /* Colore VERDE ACCESO per i numeri del rendimento */
+    
+    /* Nomi ETF: Grandi e Bianchi */
+    [data-testid="stMetricLabel"] {
+        color: #FFFFFF !important;
+        font-size: 20px !important;
+        font-weight: bold !important;
+    }
+    
+    /* Numeri Rendimento: VERDE ACCESO E GIGANTI */
     [data-testid="stMetricValue"] {
         color: #00FF00 !important;
-        font-weight: bold;
+        font-size: 35px !important;
+        font-weight: 900 !important;
     }
-    h1, h2, h3 { color: #00ffcc; }
+    
+    h1, h2, h3 { color: #00ffcc; font-family: 'Arial Black', sans-serif; }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("💎 La Mia Strategia 70/30")
-st.write("Monitoraggio Asset, Ribilanciamento e Proiezione a 10 anni.")
+st.write("Dati in tempo reale: 70% Core | 30% Satellite")
 
 # 2. SELEZIONE DEI 6 ETF (Sidebar)
 with st.sidebar:
@@ -50,9 +62,14 @@ def get_data(ticker_list):
 try:
     data = get_data(tickers)
     
-    # 4. TABELLA E METRICHE CAGR (Ora in Verde Acceso)
+    # 4. RENDIMENTI (Griglia 3x2 per maggiore spazio)
     st.subheader(f"📊 Rendimento Annuo Composto ({anni_cagr} anni)")
-    cols = st.columns(6)
+    
+    # Dividiamo in due righe da 3 per far respirare i numeri
+    riga1 = st.columns(3)
+    riga2 = st.columns(3)
+    tutte_le_cols = riga1 + riga2
+    
     cagr_results = {}
 
     for i, t in enumerate(tickers):
@@ -60,58 +77,50 @@ try:
         days = anni_cagr * 252
         if len(serie) >= days:
             v_ini, v_fin = serie.iloc[-days], serie.iloc[-1]
-            # Gestione sicura dei dati (Float/Series)
             v_i = float(v_ini.iloc[0] if hasattr(v_ini, 'iloc') else v_ini)
             v_f = float(v_fin.iloc[0] if hasattr(v_fin, 'iloc') else v_fin)
             cagr = ((v_f / v_i)**(1/anni_cagr)-1)*100
             cagr_results[t] = cagr
-            cols[i].metric(t, f"{cagr:.2f}%")
+            tutte_le_cols[i].metric(t, f"{cagr:.2f}%")
         else:
             cagr_results[t] = 8.0 
-            cols[i].metric(t, "N/D")
+            tutte_le_cols[i].metric(t, "N/D")
 
     # 5. GRAFICO STORICO
     st.markdown("---")
-    st.subheader("📈 Confronto Crescita (Base 100)")
+    st.subheader("📈 Crescita Comparativa")
     plot_data = data.tail(anni_cagr * 252)
     plot_norm = (plot_data / plot_data.iloc[0]) * 100
     fig = px.line(plot_norm, template="plotly_dark")
+    fig.update_layout(font=dict(size=15)) # Testi del grafico più grandi
     st.plotly_chart(fig, use_container_width=True)
 
     # 6. RIBILANCIAMENTO (Strategia 70/30)
     st.markdown("---")
     st.header("⚖️ Ribilanciatore")
     capitale = st.number_input("Valore Totale Portafoglio attuale (€)", value=10000.0)
-    
-    # Pesi della tua strategia
     pesi = {e1: 0.35, e2: 0.35, e3: 0.10, e4: 0.10, e5: 0.05, e6: 0.05}
     
     c1, c2 = st.columns(2)
     with c1:
-        st.write("**Allocazione Ideale:**")
+        st.write("### 🎯 Target Ideale")
         for etf, peso in pesi.items():
-            st.write(f"- {etf}: {capitale*peso:,.2f}€ ({peso*100:.0f}%)")
-    with c2:
-        st.info("💡 **Strategia:** 70% Core (35+35) e 30% Satellite (10+10+5+5).")
+            st.write(f"**{etf}**: {capitale*peso:,.2f}€")
 
     # 7. PROIEZIONE FUTURA
     st.markdown("---")
-    st.header("🔮 Simulatore Ricchezza 2036")
+    st.header("🔮 Dove sarai tra 10 anni?")
     risparmio = st.slider("Risparmio mensile (€)", 0, 5000, 500)
     
-    # Media pesata dei rendimenti reali
     resa_media = sum(cagr_results[t] * pesi[t] for t in tickers)
-    
     mesi = 10 * 12
     resa_mensile = (1 + (resa_media / 100)) ** (1/12) - 1
     proiezione = [capitale]
     for m in range(mesi):
         proiezione.append((proiezione[-1] * (1 + resa_mensile)) + risparmio)
     
-    # Anche qui il risultato finale sarà in risalto
-    st.success(f"### Capitale stimato tra 10 anni: {proiezione[-1]:,.2f}€")
+    st.success(f"## 💰 Capitale nel 2036: {proiezione[-1]:,.2f}€")
     st.line_chart(proiezione)
-    st.caption(f"Basato su rendimento medio portafoglio: {resa_media:.2f}%")
 
 except Exception as e:
-    st.error(f"Errore: {e}. Controlla i Ticker inseriti.")
+    st.error(f"Controlla la connessione o i Ticker: {e}")
