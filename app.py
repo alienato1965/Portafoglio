@@ -4,137 +4,131 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Configurazione Pagina
-st.set_page_config(page_title="Elite Terminal", layout="wide")
+st.set_page_config(page_title="Cyber Elite", layout="wide")
 
-# CSS: DESIGN MINIMALISTA E PROFESSIONALE
+# CSS: DESIGN MINIMALISTA PROFESSIONALE
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
     
-    .stApp { background-color: #000000 !important; font-family: 'Inter', sans-serif; }
+    .stApp { background-color: #0d0d0d !important; font-family: 'JetBrains Mono', monospace; }
     
-    /* Sidebar scura e sottile */
-    [data-testid="stSidebar"] { 
-        background-color: #050505 !important; 
-        border-right: 1px solid #1a1a1a;
-    }
+    /* Sidebar ultra-scura */
+    [data-testid="stSidebar"] { background-color: #050505 !important; border-right: 1px solid #1a1a1a; }
 
-    /* Metriche: Addio bordi grossi, benvenuta eleganza */
+    /* Box Metriche Stealth */
     [data-testid="stMetric"] {
-        background: #0a0a0a !important;
-        border: 1px solid #111 !important;
-        border-radius: 8px !important;
-        padding: 20px !important;
+        background: #111111 !important;
+        border: 1px solid #222 !important;
+        border-radius: 4px !important;
+        padding: 15px !important;
     }
-    [data-testid="stMetricValue"] { 
-        color: #00ff66 !important; 
-        font-family: 'JetBrains Mono', monospace; 
-        font-size: 2rem !important;
-    }
+    [data-testid="stMetricValue"] { color: #00ff99 !important; font-size: 1.8rem !important; }
     
-    /* Tabelle pulite */
-    .stTable { background-color: #050505 !important; color: #ccc !important; }
+    /* Tabelle High-Tech */
+    .stTable { background-color: #0d0d0d !important; color: #888 !important; border: 1px solid #222 !important; }
     
     /* Titoli */
-    h1, h2, h3 { 
-        color: #ffffff !important; 
-        font-weight: 700 !important; 
-        letter-spacing: -1px;
-    }
+    h1, h2, h3 { color: #ffffff !important; letter-spacing: -1px; text-transform: uppercase; }
     
-    /* Custom divider */
-    .hr { border-bottom: 1px solid #1a1a1a; margin: 20px 0; }
+    /* Linea di separazione sottile */
+    .divider { border-bottom: 1px solid #222; margin: 25px 0; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- LOGICA DATI ---
+# CONFIGURAZIONE STRATEGIA 70/30 (Dati salvati)
+# Core: 45% VWCE, 25% QDVE | Satellite: 20% Gold, 10% Jr Miners
 assets = {
     "VWCE.DE": 0.45, "QDVE.DE": 0.25, 
     "SGLN.L": 0.20, "GDXJ": 0.10
 }
 
 with st.sidebar:
-    st.markdown("### 🛠 CONFIGURAZIONE")
-    cap_tot = st.number_input("Capitale Totale (€)", value=10000)
-    pac_mens = st.number_input("PAC Mensile (€)", value=500)
+    st.markdown("### 📟 SYSTEM CONFIG")
+    cap_totale = st.number_input("CAPITALE ATTUALE (€)", value=10000)
+    pac_mensile = st.number_input("VERSAMENTO MENSILE (€)", value=500)
     st.markdown("---")
-    anni = st.slider("Orizzonte Analisi", 5, 20, 10)
+    anni_analisi = st.slider("ANNI STORICI", 5, 20, 10)
 
 @st.cache_data
-def get_data(tickers):
+def fetch_clean_data(tickers):
     try:
-        d = yf.download(tickers, period="25y")["Close"]
-        return d.ffill()
-    except: return pd.DataFrame()
+        data = yf.download(tickers, period="25y")["Close"]
+        return data.ffill()
+    except:
+        return pd.DataFrame()
 
-df = get_data(list(assets.keys()))
+df = fetch_clean_data(list(assets.keys()))
 
 if not df.empty:
-    prezzi = {t: float(df[t].iloc[-1]) for t in assets.keys()}
+    prezzi_attuali = {t: float(df[t].iloc[-1]) for t in assets.keys()}
     
-    st.title("ELITE COMMAND")
-    st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
+    st.title("ELITE COMMAND CENTER")
+    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 
-    # 1. VISUALIZZAZIONE ASSET (Donut Chart elegante)
-    col_a, col_b = st.columns([1, 2])
-    with col_a:
-        colors = ['#00ff66', '#00cc55', '#ffd700', '#ffaa00']
-        fig = go.Figure(data=[go.Pie(
+    # 1. VISUALIZZAZIONE COMPOSIZIONE (Stile Desaturato)
+    c_pie, c_stat = st.columns([1, 2])
+    
+    with c_pie:
+        # Colori cyber: Smeraldo, Foresta, Oro spento, Ambra
+        cyber_colors = ['#00ff99', '#008855', '#ccaa00', '#886600']
+        fig_pie = go.Figure(data=[go.Pie(
             labels=list(assets.keys()), 
             values=list(assets.values()), 
-            hole=.7,
-            marker=dict(colors=colors, line=dict(color='#000', width=2))
+            hole=.75,
+            marker=dict(colors=cyber_colors, line=dict(color='#0d0d0d', width=3))
         )])
-        fig.update_layout(
+        fig_pie.update_layout(
             showlegend=False, margin=dict(t=0, b=0, l=0, r=0),
             paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig_pie, use_container_width=True)
     
-    with col_b:
+    with c_stat:
         st.markdown("#### PERFORMANCE ATTUALE")
-        c1, c2 = st.columns(2)
-        # Calcolo rendimento pesato semplificato
-        rend_medio = 9.4 # Placeholder realistico
-        c1.metric("RENDIMENTO STIMATO", f"{rend_medio}%", "Annuo")
-        c2.metric("VOLATILITÀ", "Bassa", "-12.4% Max DD")
+        m1, m2 = st.columns(2)
+        # Calcolo rendimento medio pesato reale
+        rend_storico = sum([((df[t].iloc[-1]/df[t].tail(anni_analisi*252).iloc[0])**(1/anni_analisi)-1)*100 * p for t,p in assets.items()])
+        m1.metric("RENDIMENTO MEDIO", f"{rend_storico:.1f}%")
+        m2.metric("OBIETTIVO FINALE", "2036")
 
-    st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 
-    # 2. PIANO ORDINI (Tabella pulita)
-    st.subheader("⚖️ PIANO ORDINI")
-    nuovo_cap = cap_tot + pac_mens
-    res = []
+    # 2. PIANO OPERATIVO (Niente variabili troncate qui)
+    st.subheader("⚖️ PIANO ORDINI MENSILE")
+    cap_investito = cap_totale + pac_mensile
+    tabella_dati = []
     for t, p in assets.items():
-        v_target = nuovo_cap * p
-        res.append({
-            "Asset": t,
-            "Target %": f"{p*100}%",
-            "Valore Target (€)": f"{v_target:,.0f}",
-            "Quote da Avere": round(v_target / prezzi[t], 2)
+        v_target = cap_investito * p
+        tabella_dati.append({
+            "ASSET": t,
+            "TARGET (%)": f"{p*100}%",
+            "VALORE TARGET (€)": f"{v_target:,.0f}",
+            "QUOTE TOTALI": round(v_target / prezzi_attuali[t], 2)
         })
-    st.table(pd.DataFrame(res))
+    st.table(pd.DataFrame(tabella_dati))
 
-    # 3. GRAFICO TREND (Linee Neon sottili)
-    st.subheader("📈 TREND STORICO")
-    p_df = (df.tail(anni*252) / df.tail(anni*252).iloc[0]) * 100
-    fig_line = px.line(p_df, color_discrete_sequence=colors)
+    # 3. TREND STORICO (Linee sottili, niente caos)
+    st.subheader("📈 PERFORMANCE STORICA ASSET")
+    p_df = (df.tail(anni_analisi*252) / df.tail(anni_analisi*252).iloc[0]) * 100
+    fig_line = px.line(p_df, color_discrete_sequence=cyber_colors)
     fig_line.update_layout(
-        height=400, paper_bgcolor='black', plot_bgcolor='black',
-        font_color='#666', margin=dict(t=10, b=10),
-        xaxis=dict(gridcolor='#111', showline=False),
-        yaxis=dict(gridcolor='#111', showline=False)
+        height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        font_color='#444', margin=dict(t=10, b=10),
+        xaxis=dict(gridcolor='#1a1a1a', showline=False),
+        yaxis=dict(gridcolor='#1a1a1a', showline=False),
+        legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
     )
     st.plotly_chart(fig_line, use_container_width=True)
 
-    # 4. PROIEZIONE FINALE
-    st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
-    r_m = (1 + (rend_medio / 100))**(1/12) - 1
-    valori = [float(cap_tot)]
-    for _ in range(120): valori.append((valori[-1] * (1 + r_m)) + pac_mens)
+    # 4. PROIEZIONE 2036
+    r_mensile = (1 + (rend_storico / 100))**(1/12) - 1
+    val_nominale = [float(cap_totale)]
+    for _ in range(120):
+        val_nominale.append((val_nominale[-1] * (1 + r_m if 'r_m' in locals() else 1 + r_mensile)) + pac_mensile)
     
-    st.markdown(f"### 🔮 PROIEZIONE 2036: **{valori[-1]:,.0f} €**")
-    
+    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
+    st.success(f"🔮 PROIEZIONE CAPITALE NETTO 2036: {val_nominale[-1] * 0.85:,.0f} €")
+
 else:
-    st.error("Errore nel caricamento dei dati di mercato.")
+    st.error("ERRORE DI CONNESSIONE AI MERCATI.")
