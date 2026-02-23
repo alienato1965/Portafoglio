@@ -2,20 +2,13 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-# 1. Configurazione Base (Pulisce tutto il disordine precedente)
-st.set_page_config(page_title="Il Mio Portafoglio 70/30", layout="wide")
+# 1. Configurazione - Tema scuro nativo (il più leggibile)
+st.set_page_config(page_title="Gestione 70/30", layout="wide")
 
-st.title("📊 Terminale Strategia 70/30")
-st.write("Versione ultra-stabile: VWCE, QDVE, ORO, MINERS")
+st.title("📟 Terminale Operativo Strategia 70/30")
 
-# 2. Sidebar per i numeri
-with st.sidebar:
-    st.header("Impostazioni")
-    cap_tot = st.number_input("Capitale già investito (€)", value=10000)
-    pac_val = st.number_input("PAC da aggiungere oggi (€)", value=500)
-    st.info("Pesi: 45% VWCE, 25% QDVE, 20% Oro, 10% Miners")
-
-# 3. Definizione Fissa (Così non sbagliamo i calcoli)
+# 2. La tua strategia (Dati salvati)
+# CORE (70%): 45% VWCE + 25% QDVE | SATELLITE (30%): 20% ORO + 10% MINERS
 pesi = {
     "VWCE.DE": 0.45, 
     "QDVE.DE": 0.25, 
@@ -23,38 +16,54 @@ pesi = {
     "GDXJ": 0.10
 }
 
-# 4. Recupero Prezzi (Semplificato al massimo)
-@st.cache_data
-def prendi_prezzi(lista):
-    dati = yf.download(lista, period="1d")["Close"]
-    return dati.iloc[-1]
-
-try:
-    prezzi = prendi_prezzi(list(pesi.keys()))
-    
-    # 5. Tabella Ordini (Niente CSS, solo dati chiari)
-    st.header("⚖️ Quote da avere nel portafoglio")
-    cap_finale = cap_tot + pac_val
-    risultati = []
-    
+# 3. Sidebar con gli input
+with st.sidebar:
+    st.header("⚙️ Parametri")
+    cap_investito = st.number_input("Capitale già nel broker (€)", value=10000)
+    pac_fresco = st.number_input("Nuova liquidità da investire (€)", value=500)
+    st.markdown("---")
+    st.subheader("🎯 Target Allocazione")
     for t, p in pesi.items():
-        valore_target = cap_finale * p
-        risultati.append({
-            "Asset": t,
-            "Target %": f"{p*100}%",
-            "Valore (€)": round(valore_target, 2),
-            "Quote Totali": round(valore_target / prezzi[t], 2)
+        st.write(f"**{t}**: {p*100:.0f}%")
+
+# 4. Funzione recupero prezzi "blindata"
+@st.cache_data(ttl=3600)
+def get_clean_prices(tickers):
+    try:
+        data = yf.download(tickers, period="5d")["Close"]
+        return data.ffill().iloc[-1]
+    except:
+        return None
+
+prezzi = get_clean_prices(list(pesi.keys()))
+
+if prezzi is not None:
+    # 5. Tabella Ordini (Il cuore dell'app)
+    st.header("⚖️ Calcolo Quote per il Ribilanciamento")
+    nuovo_totale = cap_investito + pac_fresco
+    
+    tabella = []
+    for t, p in pesi.items():
+        valore_target = nuovo_totale * p
+        tabella.append({
+            "ETF": t,
+            "Peso": f"{p*100:.0f}%",
+            "Valore (€)": f"{valore_target:,.2f} €",
+            "Quote Totali da Avere": round(valore_target / prezzi[t], 2),
+            "Prezzo Attuale": f"{prezzi[t]:.2f} €"
         })
     
-    st.table(pd.DataFrame(risultati))
+    st.table(pd.DataFrame(tabella))
     
-    # 6. Prezzi Attuali
-    st.header("📉 Prezzi di Mercato")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("VWCE", f"{prezzi['VWCE.DE']:.2f}€")
-    c2.metric("QDVE", f"{prezzi['QDVE.DE']:.2f}€")
-    c3.metric("ORO", f"{prezzi['SGLN.L']:.2f}€")
-    c4.metric("MINERS", f"{prezzi['GDXJ']:.2f}€")
+    st.info(f"💡 Per mantenere la strategia 70/30, il tuo portafoglio totale (dopo il PAC) deve valere {nuovo_totale:,.2f} €.")
 
-except Exception as e:
-    st.error("Errore nel caricamento. Aspetta 10 secondi e ricarica la pagina.")
+else:
+    st.error("⚠️ Errore di connessione. I mercati potrebbero essere chiusi o Yahoo Finance non risponde. Riprova tra un istante.")
+
+# 6. Proiezione 2036 (Versione sicura senza bug)
+st.markdown("---")
+st.subheader("🔮 Obiettivo 2036")
+# Calcolo basato su rendimento medio prudenziale del 7%
+anni = 10
+capitale_stimato = (cap_investito + (pac_fresco * 12 * anni)) * (1.07 ** anni)
+st.write(f"Con un rendimento medio stimato del 7%, nel 2036 il capitale lordo sarà circa: **{capitale_stimato:,.0f} €**")
