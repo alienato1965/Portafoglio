@@ -2,68 +2,65 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-# 1. Configurazione - Tema scuro nativo (il più leggibile)
-st.set_page_config(page_title="Gestione 70/30", layout="wide")
+st.set_page_config(page_title="Configuratore ETF 70/30", layout="wide")
 
-st.title("📟 Terminale Operativo Strategia 70/30")
+st.title("🖥️ Terminale Asset Personalizzati")
 
-# 2. La tua strategia (Dati salvati)
-# CORE (70%): 45% VWCE + 25% QDVE | SATELLITE (30%): 20% ORO + 10% MINERS
-pesi = {
-    "VWCE.DE": 0.45, 
-    "QDVE.DE": 0.25, 
-    "SGLN.L": 0.20, 
-    "GDXJ": 0.10
-}
-
-# 3. Sidebar con gli input
+# 1. SIDEBAR: GLI SLOT PER GLI ETF
 with st.sidebar:
-    st.header("⚙️ Parametri")
-    cap_investito = st.number_input("Capitale già nel broker (€)", value=10000)
-    pac_fresco = st.number_input("Nuova liquidità da investire (€)", value=500)
-    st.markdown("---")
-    st.subheader("🎯 Target Allocazione")
-    for t, p in pesi.items():
-        st.write(f"**{t}**: {p*100:.0f}%")
+    st.header("🎛️ SLOT ETF")
+    st.write("Inserisci i Ticker (es. VWCE.DE, QDVE.DE, SGLN.L, GDXJ)")
+    
+    # Creazione dei 5 slot di input
+    slot1 = st.text_input("Slot 1 (45%)", value="VWCE.DE")
+    slot2 = st.text_input("Slot 2 (25%)", value="QDVE.DE")
+    slot3 = st.text_input("Slot 3 (20%)", value="SGLN.L")
+    slot4 = st.text_input("Slot 4 (10%)", value="GDXJ")
+    slot5 = st.text_input("Slot 5 (Opzionale %)", value="")
 
-# 4. Funzione recupero prezzi "blindata"
-@st.cache_data(ttl=3600)
-def get_clean_prices(tickers):
+    st.markdown("---")
+    capitale = st.number_input("Capitale Totale (€)", value=10000)
+    pac = st.number_input("Versamento PAC (€)", value=500)
+
+# 2. CONFIGURAZIONE DINAMICA DEI PESI
+# Gestiamo i 5 slot assegnando i pesi della tua strategia 70/30
+config = {}
+if slot1: config[slot1] = 0.45
+if slot2: config[slot2] = 0.25
+if slot3: config[slot3] = 0.20
+if slot4: config[slot4] = 0.10
+# Il quinto slot è un "bonus" se vuoi splittare ulteriormente
+if slot5: st.warning("Nota: Il 5° slot richiede di ricalcolare le % totali nel codice.")
+
+# 3. RECUPERO PREZZI
+@st.cache_data(ttl=600)
+def get_prices(tickers):
+    if not tickers: return None
     try:
         data = yf.download(tickers, period="5d")["Close"]
         return data.ffill().iloc[-1]
-    except:
-        return None
+    except: return None
 
-prezzi = get_clean_prices(list(pesi.keys()))
+prezzi_live = get_prices(list(config.keys()))
 
-if prezzi is not None:
-    # 5. Tabella Ordini (Il cuore dell'app)
-    st.header("⚖️ Calcolo Quote per il Ribilanciamento")
-    nuovo_totale = cap_investito + pac_fresco
+if prezzi_live is not None:
+    st.subheader("⚖️ Calcolo Quote per i 5 Slot")
+    tot_investito = capitale + pac
     
-    tabella = []
-    for t, p in pesi.items():
-        valore_target = nuovo_totale * p
-        tabella.append({
-            "ETF": t,
-            "Peso": f"{p*100:.0f}%",
-            "Valore (€)": f"{valore_target:,.2f} €",
-            "Quote Totali da Avere": round(valore_target / prezzi[t], 2),
-            "Prezzo Attuale": f"{prezzi[t]:.2f} €"
+    report = []
+    for ticker, peso in config.items():
+        val_target = tot_investito * peso
+        prezzo = prezzi_live[ticker] if len(config) > 1 else prezzi_live
+        
+        report.append({
+            "TICKER": ticker,
+            "PESO": f"{peso*100:.0f}%",
+            "VALORE TARGET (€)": f"{val_target:,.2f} €",
+            "QUOTE TOTALI": round(val_target / prezzo, 4),
+            "PREZZO ATTUALE": f"{prezzo:.2f} €"
         })
     
-    st.table(pd.DataFrame(tabella))
-    
-    st.info(f"💡 Per mantenere la strategia 70/30, il tuo portafoglio totale (dopo il PAC) deve valere {nuovo_totale:,.2f} €.")
-
+    st.table(pd.DataFrame(report))
+    st.success(f"✅ Analisi completata per {len(config)} strumenti finanziari.")
 else:
-    st.error("⚠️ Errore di connessione. I mercati potrebbero essere chiusi o Yahoo Finance non risponde. Riprova tra un istante.")
-
-# 6. Proiezione 2036 (Versione sicura senza bug)
-st.markdown("---")
-st.subheader("🔮 Obiettivo 2036")
-# Calcolo basato su rendimento medio prudenziale del 7%
-anni = 10
-capitale_stimato = (cap_investito + (pac_fresco * 12 * anni)) * (1.07 ** anni)
-st.write(f"Con un rendimento medio stimato del 7%, nel 2036 il capitale lordo sarà circa: **{capitale_stimato:,.0f} €**")
+    st.error("Inserisci ticker validi per attivare gli slot.")
