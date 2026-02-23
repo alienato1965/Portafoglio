@@ -3,110 +3,144 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
 
-# 1. SETUP ESTETICO RADICALE
-st.set_page_config(page_title="Deep Dark Terminal", layout="wide")
+# 1. SETUP ESTETICO "SLATE & EMERALD"
+st.set_page_config(page_title="Portfolio Overview", layout="wide")
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
     
-    /* Sfondo Nero Assoluto */
-    .stApp { background-color: #000000 !important; font-family: 'JetBrains Mono', monospace; }
-    
-    /* Sidebar Nero Dark Profondo */
-    [data-testid="stSidebar"] {
-        background-color: #000000 !important;
-        border-right: 1px solid #1a1a1a;
+    /* Sfondo Grigio Scuro Antracite */
+    .stApp {
+        background-color: #1e2127 !important;
+        font-family: 'Inter', sans-serif !important;
     }
     
-    /* Input e Slider */
-    .stSlider [data-baseweb="slider"] { background-color: #1a1a1a; }
-    div[data-testid="stMarkdownContainer"] p { color: #00ff66 !important; font-weight: bold; }
-    
-    /* Card ordini */
-    .reportview-container .main .block-container { padding-top: 2rem; }
-    .css-1r6slb0 { background-color: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 20px; }
+    /* Sidebar Grigio Piombo */
+    [data-testid="stSidebar"] {
+        background-color: #262a33 !important;
+        border-right: 1px solid #3e4451;
+    }
 
-    /* Tabelle */
-    .stTable { background-color: #050505 !important; color: white !important; }
-    thead tr th { background-color: #000 !important; color: #00ff66 !important; border-bottom: 1px solid #00ff66 !important; }
+    /* Container Card Moderne */
+    .stMetric, .stTable, div[data-testid="stBlock"] {
+        background-color: #262a33 !important;
+        border: 1px solid #3e4451 !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+    }
+
+    /* Testo e Titoli */
+    h1, h2, h3, p, label { color: #ffffff !important; }
+    
+    /* Dettagli Verde Smeraldo */
+    [data-testid="stMetricValue"] {
+        color: #50fa7b !important;
+        font-size: 1.8rem !important;
+    }
+    
+    /* Bottone Moderno Verde */
+    .stButton>button {
+        width: 100%;
+        background-color: #50fa7b !important;
+        color: #1e2127 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        height: 3em !important;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #40c963 !important;
+        box-shadow: 0 4px 15px rgba(80, 250, 123, 0.3);
+    }
+
+    /* Tabelle Pulite */
+    thead tr th {
+        background-color: #2d323c !important;
+        color: #50fa7b !important;
+        border-radius: 5px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. COLONNA DI SINISTRA (NERO DARK CON PERCENTUALI)
+# 2. SIDEBAR DINAMICA (GRIGIO SCURO)
 with st.sidebar:
-    st.markdown("<h2 style='color: white;'>🛸 CONTROL PANEL</h2>", unsafe_allow_html=True)
-    st.markdown("---")
+    st.markdown("### ⚙️ ASSET ALLOCATION")
     
-    st.subheader("🏦 CORE (70%)")
-    t1 = st.text_input("TICKER 1", value="VWCE.DE")
-    p1 = st.slider("% Slot 1", 0, 100, 45) # [cite: 2026-02-15]
+    # Slot e Slider con i tuoi pesi definitivi [cite: 2026-02-15]
+    s1 = st.text_input("TICKER 1", value="VWCE.DE")
+    p1 = st.slider("% Slot 1", 0, 100, 45)
     
-    t2 = st.text_input("TICKER 2", value="QDVE.DE")
-    p2 = st.slider("% Slot 2", 0, 100, 25) # [cite: 2026-02-15]
+    s2 = st.text_input("TICKER 2", value="QDVE.DE")
+    p2 = st.slider("% Slot 2", 0, 100, 25)
     
-    st.markdown("---")
-    st.subheader("🛰️ SATELLITE (30%)")
-    t3 = st.text_input("TICKER 3", value="SGLN.L")
-    p3 = st.slider("% Slot 3", 0, 100, 20) # [cite: 2026-02-15]
+    s3 = st.text_input("TICKER 3", value="SGLN.L")
+    p3 = st.slider("% Slot 3", 0, 100, 20)
     
-    t4 = st.text_input("TICKER 4", value="GDXJ")
-    p4 = st.slider("% Slot 4", 0, 100, 10) # [cite: 2026-02-15]
+    s4 = st.text_input("TICKER 4", value="GDXJ")
+    p4 = st.slider("% Slot 4", 0, 100, 10)
     
-    t5 = st.text_input("TICKER 5 (EXTRA)", value="")
+    s5 = st.text_input("TICKER 5", value="")
     p5 = st.slider("% Slot 5", 0, 100, 0)
-    
-    tot_pesi = p1 + p2 + p3 + p4 + p5
     
     st.markdown("---")
     cap = st.number_input("CAPITALE TOTALE (€)", value=10000)
     pac = st.number_input("VERSAMENTO PAC (€)", value=500)
     
-    st.markdown(f"**TOTALE ALLOCAZIONE: {tot_pesi}%**")
+    attivato = st.button("AGGIORNA TERMINALE")
+
+# 3. DASHBOARD CENTRALE
+st.markdown("<h2 style='text-align: center;'>✅ PORTFOLIO OVERVIEW</h2>", unsafe_allow_html=True)
+
+if attivato:
+    config = {t: p for t, p in zip([s1, s2, s3, s4, s5], [p1, p2, p3, p4, p5]) if t}
+    tot_pesi = sum(config.values())
+
     if tot_pesi != 100:
-        st.error("IL TOTALE DEVE ESSERE 100%")
-    
-    attiva = st.button("🔴 AGGIORNA CALCOLI")
+        st.error(f"Errore: Il totale è {tot_pesi}%. Deve essere 100%.")
+    else:
+        try:
+            # Download Dati
+            prezzi = yf.download(list(config.keys()), period="1d")["Close"].iloc[-1]
+            
+            # Griglia Prezzi (Metriche con bordo verde)
+            cols = st.columns(len(config))
+            for i, (t, p) in enumerate(config.items()):
+                prezzo_attuale = prezzi[t] if len(config) > 1 else prezzi
+                cols[i].metric(label=t, value=f"{prezzo_attuale:.2f} €")
 
-# 3. LOGICA DI CALCOLO E GRAFICA
-if attiva and tot_pesi == 100:
-    st.markdown("<h1 style='text-align: center; color: #00ff66;'>SYSTEM STATUS: ONLINE</h1>", unsafe_allow_html=True)
-    
-    config = {t1: p1/100, t2: p2/100, t3: p3/100, t4: p4/100}
-    if t5: config[t5] = p5/100
-    
-    try:
-        data = yf.download(list(config.keys()), period="1d")["Close"]
-        prezzi = data.iloc[-1] if len(config) > 1 else data
-        
-        # Tabella Ordini
-        st.subheader("⚖️ ORDINI DA ESEGUIRE")
-        tot_investito = cap + pac
-        ordini_lista = []
-        
-        for t, p in config.items():
-            prezzo = prezzi[t] if len(config) > 1 else prezzi
-            v_target = tot_investito * p
-            ordini_lista.append({
-                "ASSET": t,
-                "TARGET %": f"{p*100:.0f}%",
-                "VALORE TARGET (€)": f"{v_target:,.2f}",
-                "QUOTE TOTALI": round(v_target / prezzo, 4)
-            })
-        
-        st.table(pd.DataFrame(ordini_lista))
-        
-        # Grafico Donut High-Contrast
-        fig = go.Figure(data=[go.Pie(
-            labels=list(config.keys()),
-            values=list(config.values()),
-            hole=.7,
-            marker=dict(colors=['#00ff00', '#009900', '#ffff00', '#ccaa00', '#444444'])
-        )])
-        fig.update_layout(paper_bgcolor='black', font=dict(color="white"))
-        st.plotly_chart(fig, use_container_width=True)
+            # Tabella Ordini Professionale
+            st.markdown("### ⚖️ ORDINIS DI ACQUISTO/VENDITA")
+            tot_inv = cap + pac
+            data_tab = []
+            for t, p in config.items():
+                prezzo_attuale = prezzi[t] if len(config) > 1 else prezzi
+                val_target = tot_inv * (p / 100)
+                data_tab.append({
+                    "ASSET": t,
+                    "TARGET %": f"{p}%",
+                    "VALORE TARGET (€)": f"{val_target:,.2f}",
+                    "QUOTE TOTALI": round(val_target / prezzo_attuale, 2)
+                })
+            st.table(pd.DataFrame(data_tab))
 
-    except Exception as e:
-        st.error("ERRORE NEL RECUPERO DATI. CONTROLLA I TICKER.")
+            # Grafico a ciambella moderno
+            fig = go.Figure(data=[go.Pie(
+                labels=list(config.keys()),
+                values=list(config.values()),
+                hole=.6,
+                marker=dict(colors=['#50fa7b', '#40c963', '#28a745', '#1e7e34', '#145223'])
+            )])
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color="white"),
+                margin=dict(t=20, b=20, l=20, r=20)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            st.warning("Inserisci ticker validi e premi il tasto AGGIORNA.")
 else:
-    st.info("Imposta i pesi (totale 100%) e premi il tasto rosso a sinistra per caricare i dati.")
+    st.info("Configura gli asset nella colonna di sinistra e premi il tasto verde per generare la dashboard.")
